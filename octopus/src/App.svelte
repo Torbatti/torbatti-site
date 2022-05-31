@@ -1,11 +1,10 @@
 <script>
-  import Swiper from "./components/swiper.svelte"
+  import MainBar from "./components/main.svelte"
   import NavBar from "./components/navbar.svelte"
-import Navbar from "./components/navbar.svelte";
 </script>
 
-<Navbar/>
-<Swiper/>
+<NavBar/>
+<MainBar/>
 
 <style>
 

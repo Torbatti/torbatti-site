@@ -30,6 +30,14 @@ var app = (function () {
     function safe_not_equal(a, b) {
         return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
     }
+    let src_url_equal_anchor;
+    function src_url_equal(element_src, url) {
+        if (!src_url_equal_anchor) {
+            src_url_equal_anchor = document.createElement('a');
+        }
+        src_url_equal_anchor.href = url;
+        return element_src === src_url_equal_anchor.href;
+    }
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
     }
@@ -5917,6 +5925,191 @@ var app = (function () {
       return params;
     }
 
+    function Navigation(_ref) {
+      let {
+        swiper,
+        extendParams,
+        on,
+        emit
+      } = _ref;
+      extendParams({
+        navigation: {
+          nextEl: null,
+          prevEl: null,
+          hideOnClick: false,
+          disabledClass: 'swiper-button-disabled',
+          hiddenClass: 'swiper-button-hidden',
+          lockClass: 'swiper-button-lock'
+        }
+      });
+      swiper.navigation = {
+        nextEl: null,
+        $nextEl: null,
+        prevEl: null,
+        $prevEl: null
+      };
+
+      function getEl(el) {
+        let $el;
+
+        if (el) {
+          $el = $(el);
+
+          if (swiper.params.uniqueNavElements && typeof el === 'string' && $el.length > 1 && swiper.$el.find(el).length === 1) {
+            $el = swiper.$el.find(el);
+          }
+        }
+
+        return $el;
+      }
+
+      function toggleEl($el, disabled) {
+        const params = swiper.params.navigation;
+
+        if ($el && $el.length > 0) {
+          $el[disabled ? 'addClass' : 'removeClass'](params.disabledClass);
+          if ($el[0] && $el[0].tagName === 'BUTTON') $el[0].disabled = disabled;
+
+          if (swiper.params.watchOverflow && swiper.enabled) {
+            $el[swiper.isLocked ? 'addClass' : 'removeClass'](params.lockClass);
+          }
+        }
+      }
+
+      function update() {
+        // Update Navigation Buttons
+        if (swiper.params.loop) return;
+        const {
+          $nextEl,
+          $prevEl
+        } = swiper.navigation;
+        toggleEl($prevEl, swiper.isBeginning && !swiper.params.rewind);
+        toggleEl($nextEl, swiper.isEnd && !swiper.params.rewind);
+      }
+
+      function onPrevClick(e) {
+        e.preventDefault();
+        if (swiper.isBeginning && !swiper.params.loop && !swiper.params.rewind) return;
+        swiper.slidePrev();
+      }
+
+      function onNextClick(e) {
+        e.preventDefault();
+        if (swiper.isEnd && !swiper.params.loop && !swiper.params.rewind) return;
+        swiper.slideNext();
+      }
+
+      function init() {
+        const params = swiper.params.navigation;
+        swiper.params.navigation = createElementIfNotDefined(swiper, swiper.originalParams.navigation, swiper.params.navigation, {
+          nextEl: 'swiper-button-next',
+          prevEl: 'swiper-button-prev'
+        });
+        if (!(params.nextEl || params.prevEl)) return;
+        const $nextEl = getEl(params.nextEl);
+        const $prevEl = getEl(params.prevEl);
+
+        if ($nextEl && $nextEl.length > 0) {
+          $nextEl.on('click', onNextClick);
+        }
+
+        if ($prevEl && $prevEl.length > 0) {
+          $prevEl.on('click', onPrevClick);
+        }
+
+        Object.assign(swiper.navigation, {
+          $nextEl,
+          nextEl: $nextEl && $nextEl[0],
+          $prevEl,
+          prevEl: $prevEl && $prevEl[0]
+        });
+
+        if (!swiper.enabled) {
+          if ($nextEl) $nextEl.addClass(params.lockClass);
+          if ($prevEl) $prevEl.addClass(params.lockClass);
+        }
+      }
+
+      function destroy() {
+        const {
+          $nextEl,
+          $prevEl
+        } = swiper.navigation;
+
+        if ($nextEl && $nextEl.length) {
+          $nextEl.off('click', onNextClick);
+          $nextEl.removeClass(swiper.params.navigation.disabledClass);
+        }
+
+        if ($prevEl && $prevEl.length) {
+          $prevEl.off('click', onPrevClick);
+          $prevEl.removeClass(swiper.params.navigation.disabledClass);
+        }
+      }
+
+      on('init', () => {
+        init();
+        update();
+      });
+      on('toEdge fromEdge lock unlock', () => {
+        update();
+      });
+      on('destroy', () => {
+        destroy();
+      });
+      on('enable disable', () => {
+        const {
+          $nextEl,
+          $prevEl
+        } = swiper.navigation;
+
+        if ($nextEl) {
+          $nextEl[swiper.enabled ? 'removeClass' : 'addClass'](swiper.params.navigation.lockClass);
+        }
+
+        if ($prevEl) {
+          $prevEl[swiper.enabled ? 'removeClass' : 'addClass'](swiper.params.navigation.lockClass);
+        }
+      });
+      on('click', (_s, e) => {
+        const {
+          $nextEl,
+          $prevEl
+        } = swiper.navigation;
+        const targetEl = e.target;
+
+        if (swiper.params.navigation.hideOnClick && !$(targetEl).is($prevEl) && !$(targetEl).is($nextEl)) {
+          if (swiper.pagination && swiper.params.pagination && swiper.params.pagination.clickable && (swiper.pagination.el === targetEl || swiper.pagination.el.contains(targetEl))) return;
+          let isHidden;
+
+          if ($nextEl) {
+            isHidden = $nextEl.hasClass(swiper.params.navigation.hiddenClass);
+          } else if ($prevEl) {
+            isHidden = $prevEl.hasClass(swiper.params.navigation.hiddenClass);
+          }
+
+          if (isHidden === true) {
+            emit('navigationShow');
+          } else {
+            emit('navigationHide');
+          }
+
+          if ($nextEl) {
+            $nextEl.toggleClass(swiper.params.navigation.hiddenClass);
+          }
+
+          if ($prevEl) {
+            $prevEl.toggleClass(swiper.params.navigation.hiddenClass);
+          }
+        }
+      });
+      Object.assign(swiper.navigation, {
+        update,
+        init,
+        destroy
+      });
+    }
+
     function classesToSelector(classes) {
       if (classes === void 0) {
         classes = '';
@@ -6634,7 +6827,7 @@ var app = (function () {
     }
 
     /* node_modules/swiper/svelte/swiper.svelte generated by Svelte v3.48.0 */
-    const file$3 = "node_modules/swiper/svelte/swiper.svelte";
+    const file$4 = "node_modules/swiper/svelte/swiper.svelte";
     const get_container_end_slot_changes = dirty => ({ virtualData: dirty & /*virtualData*/ 512 });
     const get_container_end_slot_context = ctx => ({ virtualData: /*virtualData*/ ctx[9] });
     const get_wrapper_end_slot_changes = dirty => ({ virtualData: dirty & /*virtualData*/ 512 });
@@ -6658,9 +6851,9 @@ var app = (function () {
     			t = space();
     			div1 = element("div");
     			attr_dev(div0, "class", "swiper-button-prev");
-    			add_location(div0, file$3, 169, 4, 4194);
+    			add_location(div0, file$4, 169, 4, 4194);
     			attr_dev(div1, "class", "swiper-button-next");
-    			add_location(div1, file$3, 170, 4, 4252);
+    			add_location(div1, file$4, 170, 4, 4252);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
@@ -6698,7 +6891,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			attr_dev(div, "class", "swiper-scrollbar");
-    			add_location(div, file$3, 173, 4, 4355);
+    			add_location(div, file$4, 173, 4, 4355);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -6730,7 +6923,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			attr_dev(div, "class", "swiper-pagination");
-    			add_location(div, file$3, 176, 4, 4462);
+    			add_location(div, file$4, 176, 4, 4462);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -6754,7 +6947,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$5(ctx) {
+    function create_fragment$7(ctx) {
     	let div1;
     	let t0;
     	let div0;
@@ -6816,9 +7009,9 @@ var app = (function () {
     			t6 = space();
     			if (container_end_slot) container_end_slot.c();
     			attr_dev(div0, "class", "swiper-wrapper");
-    			add_location(div0, file$3, 163, 2, 4021);
+    			add_location(div0, file$4, 163, 2, 4021);
     			set_attributes(div1, div1_data);
-    			add_location(div1, file$3, 157, 0, 3856);
+    			add_location(div1, file$4, 157, 0, 3856);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7023,7 +7216,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$5.name,
+    		id: create_fragment$7.name,
     		type: "component",
     		source: "",
     		ctx
@@ -7032,7 +7225,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$5($$self, $$props, $$invalidate) {
+    function instance$7($$self, $$props, $$invalidate) {
     	const omit_props_names = ["class","swiper"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { $$slots: slots = {}, $$scope } = $$props;
@@ -7301,13 +7494,13 @@ var app = (function () {
     class Swiper extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$5, create_fragment$5, safe_not_equal, { class: 0, swiper: 10 });
+    		init(this, options, instance$7, create_fragment$7, safe_not_equal, { class: 0, swiper: 10 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Swiper",
     			options,
-    			id: create_fragment$5.name
+    			id: create_fragment$7.name
     		});
     	}
 
@@ -7329,7 +7522,7 @@ var app = (function () {
     }
 
     /* node_modules/swiper/svelte/swiper-slide.svelte generated by Svelte v3.48.0 */
-    const file$2 = "node_modules/swiper/svelte/swiper-slide.svelte";
+    const file$3 = "node_modules/swiper/svelte/swiper-slide.svelte";
     const get_default_slot_changes_1 = dirty => ({ data: dirty & /*slideData*/ 32 });
     const get_default_slot_context_1 = ctx => ({ data: /*slideData*/ ctx[5] });
     const get_default_slot_changes = dirty => ({ data: dirty & /*slideData*/ 32 });
@@ -7411,7 +7604,7 @@ var app = (function () {
     			? /*zoom*/ ctx[0]
     			: undefined);
 
-    			add_location(div, file$2, 85, 4, 2107);
+    			add_location(div, file$3, 85, 4, 2107);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -7470,7 +7663,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$4(ctx) {
+    function create_fragment$6(ctx) {
     	let div;
     	let current_block_type_index;
     	let if_block;
@@ -7508,7 +7701,7 @@ var app = (function () {
     			div = element("div");
     			if_block.c();
     			set_attributes(div, div_data);
-    			add_location(div, file$2, 78, 0, 1923);
+    			add_location(div, file$3, 78, 0, 1923);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7572,7 +7765,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$4.name,
+    		id: create_fragment$6.name,
     		type: "component",
     		source: "",
     		ctx
@@ -7581,7 +7774,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$4($$self, $$props, $$invalidate) {
+    function instance$6($$self, $$props, $$invalidate) {
     	let slideData;
     	const omit_props_names = ["zoom","virtualIndex","class"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
@@ -7732,13 +7925,13 @@ var app = (function () {
     class Swiper_slide extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { zoom: 0, virtualIndex: 1, class: 2 });
+    		init(this, options, instance$6, create_fragment$6, safe_not_equal, { zoom: 0, virtualIndex: 1, class: 2 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Swiper_slide",
     			options,
-    			id: create_fragment$4.name
+    			id: create_fragment$6.name
     		});
     	}
 
@@ -7770,7 +7963,7 @@ var app = (function () {
     /* src/components/codebox.svelte generated by Svelte v3.48.0 */
 
     const { Object: Object_1 } = globals;
-    const file$1 = "src/components/codebox.svelte";
+    const file$2 = "src/components/codebox.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -7786,7 +7979,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (29:20) {#each Object.entries(languages)  as [lang,langValue]}
+    // (28:20) {#each Object.entries(languages)  as [lang,langValue]}
     function create_each_block_1(ctx) {
     	let div;
     	let t0_value = /*langValue*/ ctx[5][0] + "";
@@ -7807,7 +8000,7 @@ var app = (function () {
     			attr_dev(div, "class", "lang mt-1 md:mt-3 w-24 md:w-32 md:h-10 flex items-center pl-2");
     			toggle_class(div, "border-l-4", /*currentLang*/ ctx[0] == /*langValue*/ ctx[5][0]);
     			toggle_class(div, "border-slate-800", /*currentLang*/ ctx[0] == /*langValue*/ ctx[5][0]);
-    			add_location(div, file$1, 29, 24, 1111);
+    			add_location(div, file$2, 28, 24, 1050);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -7841,14 +8034,14 @@ var app = (function () {
     		block,
     		id: create_each_block_1.name,
     		type: "each",
-    		source: "(29:20) {#each Object.entries(languages)  as [lang,langValue]}",
+    		source: "(28:20) {#each Object.entries(languages)  as [lang,langValue]}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (41:16) {#each Object.entries(languages)  as [lang,langValue]}
+    // (40:16) {#each Object.entries(languages)  as [lang,langValue]}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*langValue*/ ctx[5][1] + "";
@@ -7863,7 +8056,7 @@ var app = (function () {
     			attr_dev(div, "class", "showTag");
     			toggle_class(div, "hidden", /*currentLang*/ ctx[0] !== /*langValue*/ ctx[5][0]);
     			toggle_class(div, "flex", /*currentLang*/ ctx[0] == /*langValue*/ ctx[5][0]);
-    			add_location(div, file$1, 41, 20, 1729);
+    			add_location(div, file$2, 40, 20, 1673);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -7888,29 +8081,27 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(41:16) {#each Object.entries(languages)  as [lang,langValue]}",
+    		source: "(40:16) {#each Object.entries(languages)  as [lang,langValue]}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$3(ctx) {
+    function create_fragment$5(ctx) {
     	let codeBox;
-    	let p;
-    	let t1;
     	let div8;
     	let div3;
     	let div0;
-    	let t2;
+    	let t0;
     	let div1;
-    	let t3;
+    	let t1;
     	let div2;
-    	let t4;
+    	let t2;
     	let div7;
     	let div5;
     	let div4;
-    	let t5;
+    	let t3;
     	let div6;
     	let each_value_1 = Object.entries(/*languages*/ ctx[1]);
     	validate_each_argument(each_value_1);
@@ -7931,17 +8122,14 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			codeBox = element("codeBox");
-    			p = element("p");
-    			p.textContent = "skills";
-    			t1 = space();
     			div8 = element("div");
     			div3 = element("div");
     			div0 = element("div");
-    			t2 = space();
+    			t0 = space();
     			div1 = element("div");
-    			t3 = space();
+    			t1 = space();
     			div2 = element("div");
-    			t4 = space();
+    			t2 = space();
     			div7 = element("div");
     			div5 = element("div");
     			div4 = element("div");
@@ -7950,49 +8138,46 @@ var app = (function () {
     				each_blocks_1[i].c();
     			}
 
-    			t5 = space();
+    			t3 = space();
     			div6 = element("div");
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
-    			add_location(p, file$1, 17, 4, 441);
     			attr_dev(div0, "class", "dots ml-3 w-2 h-2 rounded-full bg-red-400");
-    			add_location(div0, file$1, 20, 12, 587);
+    			add_location(div0, file$2, 19, 12, 517);
     			attr_dev(div1, "class", "dots ml-2 w-2 h-2 rounded-full bg-amber-300");
-    			add_location(div1, file$1, 21, 12, 661);
+    			add_location(div1, file$2, 20, 12, 591);
     			attr_dev(div2, "class", "dots ml-2 w-2 h-2 rounded-full bg-lime-300");
-    			add_location(div2, file$1, 22, 12, 737);
-    			attr_dev(div3, "class", "topBar w-80 h-6 bg-slate-500 rounded-t-md flex items-center md:w-[40rem]");
-    			add_location(div3, file$1, 19, 8, 488);
+    			add_location(div2, file$2, 21, 12, 667);
+    			attr_dev(div3, "class", "topBar w-[23rem] h-6 bg-slate-500 rounded-t-md flex items-center md:w-[40rem]");
+    			add_location(div3, file$2, 18, 8, 413);
     			attr_dev(div4, "class", "langBox border-slate-700");
-    			add_location(div4, file$1, 27, 16, 973);
-    			attr_dev(div5, "class", "langs w-24 h-56 md:h-96 md:w-32");
-    			add_location(div5, file$1, 26, 12, 911);
-    			attr_dev(div6, "class", "codeBox w-56 h-56 bg-zinc-800 md:h-96 md:w-[32rem]");
-    			add_location(div6, file$1, 39, 12, 1573);
-    			attr_dev(div7, "class", "Box w-80 h-56 bg-slate-400 flex md:h-96 md:w-[40rem]");
-    			add_location(div7, file$1, 24, 8, 823);
+    			add_location(div4, file$2, 26, 16, 912);
+    			attr_dev(div5, "class", "langs w-[7rem] h-56 md:h-96 md:w-32");
+    			add_location(div5, file$2, 25, 12, 846);
+    			attr_dev(div6, "class", "codeBox w-[16rem] h-56 bg-zinc-800 md:h-96 md:w-[32rem]");
+    			add_location(div6, file$2, 38, 12, 1512);
+    			attr_dev(div7, "class", "Box w-[23rem] h-56 bg-slate-400 flex md:h-96 md:w-[40rem]");
+    			add_location(div7, file$2, 23, 8, 753);
     			attr_dev(div8, "class", "window");
-    			add_location(div8, file$1, 18, 4, 459);
-    			add_location(codeBox, file$1, 16, 0, 427);
+    			add_location(div8, file$2, 17, 4, 384);
+    			add_location(codeBox, file$2, 16, 0, 370);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, codeBox, anchor);
-    			append_dev(codeBox, p);
-    			append_dev(codeBox, t1);
     			append_dev(codeBox, div8);
     			append_dev(div8, div3);
     			append_dev(div3, div0);
-    			append_dev(div3, t2);
+    			append_dev(div3, t0);
     			append_dev(div3, div1);
-    			append_dev(div3, t3);
+    			append_dev(div3, t1);
     			append_dev(div3, div2);
-    			append_dev(div8, t4);
+    			append_dev(div8, t2);
     			append_dev(div8, div7);
     			append_dev(div7, div5);
     			append_dev(div5, div4);
@@ -8001,7 +8186,7 @@ var app = (function () {
     				each_blocks_1[i].m(div4, null);
     			}
 
-    			append_dev(div7, t5);
+    			append_dev(div7, t3);
     			append_dev(div7, div6);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
@@ -8068,7 +8253,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
+    		id: create_fragment$5.name,
     		type: "component",
     		source: "",
     		ctx
@@ -8077,19 +8262,19 @@ var app = (function () {
     	return block;
     }
 
-    function instance$3($$self, $$props, $$invalidate) {
+    function instance$5($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Codebox', slots, []);
     	let currentLang = "JavaScript";
 
     	let languages = {
-    		"JavaScript": ["JavaScript", "JavaScript"],
-    		"Php": ["Php", "Php , Larabel , Symphony"],
-    		"Rust": ["Rust", "Rust"],
-    		"Go": ["Go", "Go"],
-    		"Haskell": ["Haskell", "Haskell"],
-    		"Python": ["Python", "Python"],
-    		"Ruby": ["Ruby", "Ruby"]
+    		"JavaScript": ["JavaScript", ""],
+    		"Php": ["Php", ""],
+    		"Rust": ["Rust", ""],
+    		"Go": ["Go", ""],
+    		"Haskell": ["Haskell", ""],
+    		"Python": ["Python", ""],
+    		"Ruby": ["Ruby", ""]
     	};
 
     	function langHandler(langValue) {
@@ -8123,21 +8308,493 @@ var app = (function () {
     class Codebox extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {});
+    		init(this, options, instance$5, create_fragment$5, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Codebox",
+    			options,
+    			id: create_fragment$5.name
+    		});
+    	}
+    }
+
+    /* src/components/about.svelte generated by Svelte v3.48.0 */
+
+    const file$1 = "src/components/about.svelte";
+
+    function create_fragment$4(ctx) {
+    	let div2;
+    	let div0;
+    	let t0;
+    	let div1;
+    	let p0;
+    	let t2;
+    	let p1;
+
+    	const block = {
+    		c: function create() {
+    			div2 = element("div");
+    			div0 = element("div");
+    			t0 = space();
+    			div1 = element("div");
+    			p0 = element("p");
+    			p0.textContent = "Email: msg.torbatti@gmail.com";
+    			t2 = space();
+    			p1 = element("p");
+    			p1.textContent = "Phone: +9809166768658";
+    			attr_dev(div0, "class", "pic w-56 md:w-72 h-56 md:h-72 bg-emerald-900 rounded-full");
+    			add_location(div0, file$1, 5, 4, 101);
+    			add_location(p0, file$1, 8, 8, 329);
+    			add_location(p1, file$1, 9, 8, 374);
+    			attr_dev(div1, "class", "about w-72 md:w-[30rem] h-48 md:h-72 text-emerald-900 mt-4 md:mt-0 md:ml-4 flex flex-col items-center justify-center");
+    			add_location(div1, file$1, 7, 4, 189);
+    			attr_dev(div2, "class", "flex flex-col items-center md:flex md:flex-row md:item-center");
+    			add_location(div2, file$1, 4, 0, 21);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div2, anchor);
+    			append_dev(div2, div0);
+    			append_dev(div2, t0);
+    			append_dev(div2, div1);
+    			append_dev(div1, p0);
+    			append_dev(div1, t2);
+    			append_dev(div1, p1);
+    		},
+    		p: noop,
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div2);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$4.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$4($$self, $$props) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('About', slots, []);
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<About> was created with unknown prop '${key}'`);
+    	});
+
+    	return [];
+    }
+
+    class About extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "About",
+    			options,
+    			id: create_fragment$4.name
+    		});
+    	}
+    }
+
+    /* src/components/projects.svelte generated by Svelte v3.48.0 */
+
+    // (24:4) <SwiperSlide>
+    function create_default_slot_4(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text$1("Slide 1");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_4.name,
+    		type: "slot",
+    		source: "(24:4) <SwiperSlide>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (25:4) <SwiperSlide>
+    function create_default_slot_3$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text$1("Slide 2");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_3$1.name,
+    		type: "slot",
+    		source: "(25:4) <SwiperSlide>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (26:4) <SwiperSlide>
+    function create_default_slot_2$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text$1("Slide 3");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_2$1.name,
+    		type: "slot",
+    		source: "(26:4) <SwiperSlide>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (27:4) <SwiperSlide>
+    function create_default_slot_1$1(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text$1("Slide 4");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1$1.name,
+    		type: "slot",
+    		source: "(27:4) <SwiperSlide>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (23:0) <Swiper {pagination} navigation={true} modules={[Pagination,Navigation]} class="mySwiper2 swiper-h">
+    function create_default_slot$1(ctx) {
+    	let swiperslide0;
+    	let t0;
+    	let swiperslide1;
+    	let t1;
+    	let swiperslide2;
+    	let t2;
+    	let swiperslide3;
+    	let current;
+
+    	swiperslide0 = new Swiper_slide({
+    			props: {
+    				$$slots: { default: [create_default_slot_4] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	swiperslide1 = new Swiper_slide({
+    			props: {
+    				$$slots: { default: [create_default_slot_3$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	swiperslide2 = new Swiper_slide({
+    			props: {
+    				$$slots: { default: [create_default_slot_2$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	swiperslide3 = new Swiper_slide({
+    			props: {
+    				$$slots: { default: [create_default_slot_1$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(swiperslide0.$$.fragment);
+    			t0 = space();
+    			create_component(swiperslide1.$$.fragment);
+    			t1 = space();
+    			create_component(swiperslide2.$$.fragment);
+    			t2 = space();
+    			create_component(swiperslide3.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(swiperslide0, target, anchor);
+    			insert_dev(target, t0, anchor);
+    			mount_component(swiperslide1, target, anchor);
+    			insert_dev(target, t1, anchor);
+    			mount_component(swiperslide2, target, anchor);
+    			insert_dev(target, t2, anchor);
+    			mount_component(swiperslide3, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const swiperslide0_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				swiperslide0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			swiperslide0.$set(swiperslide0_changes);
+    			const swiperslide1_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				swiperslide1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			swiperslide1.$set(swiperslide1_changes);
+    			const swiperslide2_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				swiperslide2_changes.$$scope = { dirty, ctx };
+    			}
+
+    			swiperslide2.$set(swiperslide2_changes);
+    			const swiperslide3_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				swiperslide3_changes.$$scope = { dirty, ctx };
+    			}
+
+    			swiperslide3.$set(swiperslide3_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(swiperslide0.$$.fragment, local);
+    			transition_in(swiperslide1.$$.fragment, local);
+    			transition_in(swiperslide2.$$.fragment, local);
+    			transition_in(swiperslide3.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(swiperslide0.$$.fragment, local);
+    			transition_out(swiperslide1.$$.fragment, local);
+    			transition_out(swiperslide2.$$.fragment, local);
+    			transition_out(swiperslide3.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(swiperslide0, detaching);
+    			if (detaching) detach_dev(t0);
+    			destroy_component(swiperslide1, detaching);
+    			if (detaching) detach_dev(t1);
+    			destroy_component(swiperslide2, detaching);
+    			if (detaching) detach_dev(t2);
+    			destroy_component(swiperslide3, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$1.name,
+    		type: "slot",
+    		source: "(23:0) <Swiper {pagination} navigation={true} modules={[Pagination,Navigation]} class=\\\"mySwiper2 swiper-h\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$3(ctx) {
+    	let swiper;
+    	let current;
+
+    	swiper = new Swiper({
+    			props: {
+    				pagination: /*pagination*/ ctx[0],
+    				navigation: true,
+    				modules: [Pagination, Navigation],
+    				class: "mySwiper2 swiper-h",
+    				$$slots: { default: [create_default_slot$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(swiper.$$.fragment);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(swiper, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const swiper_changes = {};
+
+    			if (dirty & /*$$scope*/ 2) {
+    				swiper_changes.$$scope = { dirty, ctx };
+    			}
+
+    			swiper.$set(swiper_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(swiper.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(swiper.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(swiper, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Projects', slots, []);
+
+    	const pagination = {
+    		clickable: true,
+    		renderBullet(index, className) {
+    			return '<span class="' + className + '">' + (index + 1) + "</span>";
+    		}
+    	};
+
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Projects> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$capture_state = () => ({
+    		Swiper,
+    		SwiperSlide: Swiper_slide,
+    		Pagination,
+    		Navigation,
+    		pagination
+    	});
+
+    	return [pagination];
+    }
+
+    class Projects extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Projects",
     			options,
     			id: create_fragment$3.name
     		});
     	}
     }
 
-    /* src/components/swiper.svelte generated by Svelte v3.48.0 */
+    /* src/components/main.svelte generated by Svelte v3.48.0 */
 
-    // (31:4) <SwiperSlide class="bg-emerald-900">
-    function create_default_slot_4(ctx) {
+    // (36:2) <SwiperSlide class="bg-zinc-800">
+    function create_default_slot_3(ctx) {
+    	let aboutbar;
+    	let current;
+    	aboutbar = new About({ $$inline: true });
+
+    	const block = {
+    		c: function create() {
+    			create_component(aboutbar.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(aboutbar, target, anchor);
+    			current = true;
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(aboutbar.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(aboutbar.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(aboutbar, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_3.name,
+    		type: "slot",
+    		source: "(36:2) <SwiperSlide class=\\\"bg-zinc-800\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (41:4) <SwiperSlide class="bg-emerald-900">
+    function create_default_slot_2(ctx) {
     	let codebox;
     	let current;
     	codebox = new Codebox({ $$inline: true });
@@ -8166,82 +8823,40 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_4.name,
-    		type: "slot",
-    		source: "(31:4) <SwiperSlide class=\\\"bg-emerald-900\\\">",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (35:4) <SwiperSlide class="bg-zinc-800">
-    function create_default_slot_3(ctx) {
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text$1("Slide 2");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_default_slot_3.name,
-    		type: "slot",
-    		source: "(35:4) <SwiperSlide class=\\\"bg-zinc-800\\\">",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (39:4) <SwiperSlide class="bg-emerald-900">
-    function create_default_slot_2(ctx) {
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			t = text$1("Slide 3");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
     		id: create_default_slot_2.name,
     		type: "slot",
-    		source: "(39:4) <SwiperSlide class=\\\"bg-emerald-900\\\">",
+    		source: "(41:4) <SwiperSlide class=\\\"bg-emerald-900\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (42:4) <SwiperSlide class="bg-zinc-800">
+    // (45:4) <SwiperSlide class="bg-zinc-800">
     function create_default_slot_1(ctx) {
-    	let t;
+    	let projects;
+    	let current;
+    	projects = new Projects({ $$inline: true });
 
     	const block = {
     		c: function create() {
-    			t = text$1("Slide 4");
+    			create_component(projects.$$.fragment);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    			mount_component(projects, target, anchor);
+    			current = true;
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(projects.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(projects.$$.fragment, local);
+    			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    			destroy_component(projects, detaching);
     		}
     	};
 
@@ -8249,14 +8864,14 @@ var app = (function () {
     		block,
     		id: create_default_slot_1.name,
     		type: "slot",
-    		source: "(42:4) <SwiperSlide class=\\\"bg-zinc-800\\\">",
+    		source: "(45:4) <SwiperSlide class=\\\"bg-zinc-800\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (20:2) <Swiper     direction={"vertical"}     slidesPerView={1}     spaceBetween={0}     mousewheel={true}     pagination={{       clickable: true,     }}     modules={[Mousewheel, Pagination]}     class="mySwiper"   >
+    // (22:2) <Swiper     direction={"vertical"}     slidesPerView={1}     spaceBetween={0}     mousewheel={true}     pagination={{       clickable: true,     }}     modules={[Mousewheel, Pagination]}     class="mySwiper swiper-v"   >
     function create_default_slot(ctx) {
     	let swiperslide0;
     	let t0;
@@ -8268,11 +8883,7 @@ var app = (function () {
     	let current;
 
     	swiperslide0 = new Swiper_slide({
-    			props: {
-    				class: "bg-emerald-900",
-    				$$slots: { default: [create_default_slot_4] },
-    				$$scope: { ctx }
-    			},
+    			props: { class: "bg-emerald-900" },
     			$$inline: true
     		});
 
@@ -8324,13 +8935,6 @@ var app = (function () {
     			current = true;
     		},
     		p: function update(ctx, dirty) {
-    			const swiperslide0_changes = {};
-
-    			if (dirty & /*$$scope*/ 1) {
-    				swiperslide0_changes.$$scope = { dirty, ctx };
-    			}
-
-    			swiperslide0.$set(swiperslide0_changes);
     			const swiperslide1_changes = {};
 
     			if (dirty & /*$$scope*/ 1) {
@@ -8383,7 +8987,7 @@ var app = (function () {
     		block,
     		id: create_default_slot.name,
     		type: "slot",
-    		source: "(20:2) <Swiper     direction={\\\"vertical\\\"}     slidesPerView={1}     spaceBetween={0}     mousewheel={true}     pagination={{       clickable: true,     }}     modules={[Mousewheel, Pagination]}     class=\\\"mySwiper\\\"   >",
+    		source: "(22:2) <Swiper     direction={\\\"vertical\\\"}     slidesPerView={1}     spaceBetween={0}     mousewheel={true}     pagination={{       clickable: true,     }}     modules={[Mousewheel, Pagination]}     class=\\\"mySwiper swiper-v\\\"   >",
     		ctx
     	});
 
@@ -8402,7 +9006,7 @@ var app = (function () {
     				mousewheel: true,
     				pagination: { clickable: true },
     				modules: [Mousewheel, Pagination],
-    				class: "mySwiper",
+    				class: "mySwiper swiper-v",
     				$$slots: { default: [create_default_slot] },
     				$$scope: { ctx }
     			},
@@ -8456,11 +9060,11 @@ var app = (function () {
 
     function instance$2($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Swiper', slots, []);
+    	validate_slots('Main', slots, []);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Swiper> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Main> was created with unknown prop '${key}'`);
     	});
 
     	$$self.$capture_state = () => ({
@@ -8468,20 +9072,22 @@ var app = (function () {
     		SwiperSlide: Swiper_slide,
     		Mousewheel,
     		Pagination,
-    		CodeBox: Codebox
+    		CodeBox: Codebox,
+    		AboutBar: About,
+    		Projects
     	});
 
     	return [];
     }
 
-    class Swiper_1 extends SvelteComponentDev {
+    class Main extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
     		init(this, options, instance$2, create_fragment$2, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
-    			tagName: "Swiper_1",
+    			tagName: "Main",
     			options,
     			id: create_fragment$2.name
     		});
@@ -8495,12 +9101,38 @@ var app = (function () {
     function create_fragment$1(ctx) {
     	let nav;
     	let div;
+    	let p0;
+    	let t1;
+    	let a;
+    	let img;
+    	let img_src_value;
+    	let t2;
+    	let p1;
 
     	const block = {
     		c: function create() {
     			nav = element("nav");
     			div = element("div");
-    			attr_dev(div, "class", "links flex w-screen");
+    			p0 = element("p");
+    			p0.textContent = "Torbatti";
+    			t1 = space();
+    			a = element("a");
+    			img = element("img");
+    			t2 = space();
+    			p1 = element("p");
+    			p1.textContent = "Fork Me";
+    			attr_dev(p0, "class", "text-xl text-zinc-800");
+    			add_location(p0, file, 7, 8, 183);
+    			if (!src_url_equal(img.src, img_src_value = "./GitHub-Mark.png")) attr_dev(img, "src", img_src_value);
+    			attr_dev(img, "alt", "fork me from github");
+    			attr_dev(img, "class", "svelte-129i37n");
+    			add_location(img, file, 9, 12, 345);
+    			attr_dev(p1, "class", "mr-2");
+    			add_location(p1, file, 10, 12, 413);
+    			attr_dev(a, "href", "https://github.com/Torbatti/torbatti-site");
+    			attr_dev(a, "class", "flex flex-row-reverse items-center");
+    			add_location(a, file, 8, 8, 237);
+    			attr_dev(div, "class", "links flex w-screen justify-between items-center px-6");
     			add_location(div, file, 6, 4, 107);
     			attr_dev(nav, "class", "w-screen h-12 bg-emerald-600 fixed top-0 left-0 right-0 z-50 flex ");
     			add_location(nav, file, 5, 0, 22);
@@ -8511,6 +9143,12 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			insert_dev(target, nav, anchor);
     			append_dev(nav, div);
+    			append_dev(div, p0);
+    			append_dev(div, t1);
+    			append_dev(div, a);
+    			append_dev(a, img);
+    			append_dev(a, t2);
+    			append_dev(a, p1);
     		},
     		p: noop,
     		i: noop,
@@ -8562,16 +9200,16 @@ var app = (function () {
     function create_fragment(ctx) {
     	let navbar;
     	let t;
-    	let swiper;
+    	let mainbar;
     	let current;
     	navbar = new Navbar({ $$inline: true });
-    	swiper = new Swiper_1({ $$inline: true });
+    	mainbar = new Main({ $$inline: true });
 
     	const block = {
     		c: function create() {
     			create_component(navbar.$$.fragment);
     			t = space();
-    			create_component(swiper.$$.fragment);
+    			create_component(mainbar.$$.fragment);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -8579,25 +9217,25 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			mount_component(navbar, target, anchor);
     			insert_dev(target, t, anchor);
-    			mount_component(swiper, target, anchor);
+    			mount_component(mainbar, target, anchor);
     			current = true;
     		},
     		p: noop,
     		i: function intro(local) {
     			if (current) return;
     			transition_in(navbar.$$.fragment, local);
-    			transition_in(swiper.$$.fragment, local);
+    			transition_in(mainbar.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(navbar.$$.fragment, local);
-    			transition_out(swiper.$$.fragment, local);
+    			transition_out(mainbar.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			destroy_component(navbar, detaching);
     			if (detaching) detach_dev(t);
-    			destroy_component(swiper, detaching);
+    			destroy_component(mainbar, detaching);
     		}
     	};
 
@@ -8621,7 +9259,7 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Swiper: Swiper_1, NavBar: Navbar, Navbar });
+    	$$self.$capture_state = () => ({ MainBar: Main, NavBar: Navbar });
     	return [];
     }
 

@@ -12,6 +12,8 @@
     import { Mousewheel, Pagination } from "swiper";
 
     import CodeBox from "./codebox.svelte"
+    import AboutBar from "./about.svelte"
+    import Projects from "./projects.svelte"
   </script>
   
   
@@ -26,21 +28,22 @@
       clickable: true,
     }}
     modules={[Mousewheel, Pagination]}
-    class="mySwiper"
+    class="mySwiper swiper-v"
   >
+  <SwiperSlide class="bg-emerald-900">
+  </SwiperSlide>
+  
+  <SwiperSlide class="bg-zinc-800">
+    <AboutBar/>
+  </SwiperSlide>
+  
+    
     <SwiperSlide class="bg-emerald-900">
       <CodeBox/>
     </SwiperSlide>
-  
+
     <SwiperSlide class="bg-zinc-800">
-    Slide 2
-    </SwiperSlide>
-    
-    <SwiperSlide class="bg-emerald-900">
-    Slide 3
-    </SwiperSlide>
-    <SwiperSlide class="bg-zinc-800">
-    Slide 4
+      <Projects/>
     </SwiperSlide>
     
   </Swiper>
