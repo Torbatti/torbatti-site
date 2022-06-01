@@ -54,8 +54,8 @@ span.swiper-pagination-bullet.swiper-pagination-bullet-active {
   opacity: 1;
 }
 .swiper .mySwiper2{
-  width: 360px;
-  height: 680px;
+  width: 330px;
+  height: 620px;
   /* background-color: rgb(39, 39, 42); */
 }
 
@@ -78,3 +78,11 @@ span.swiper-pagination-bullet.swiper-pagination-bullet-active {
 }
 .swiper-h .swiper-button-next { color: rgb(34, 151, 79); }
 .swiper-h .swiper-button-prev { color: rgb(34, 151, 79);}
+
+@media (min-width: 768px) {
+  .swiper .mySwiper2{
+    width: 560px;
+    height: 866px;
+    /* background-color: rgb(39, 39, 42); */
+  }
+}

@@ -16,12 +16,12 @@ function langHandler(langValue){
 
 <codeBox>
     <div class="window">
-        <div class="topBar w-[23rem] h-6 bg-slate-500 rounded-t-md flex items-center md:w-[40rem]">
+        <div class="topBar w-[20rem] h-6 bg-slate-500 rounded-t-md flex items-center md:w-[40rem]">
             <div class="dots ml-3 w-2 h-2 rounded-full bg-red-400"></div>
             <div class="dots ml-2 w-2 h-2 rounded-full bg-amber-300"></div>
             <div class="dots ml-2 w-2 h-2 rounded-full bg-lime-300"></div>
         </div>
-        <div class="Box w-[23rem] h-56 bg-slate-400 flex md:h-96 md:w-[40rem]">
+        <div class="Box w-[20rem] h-56 bg-slate-400 flex md:h-96 md:w-[40rem]">
         
             <div class="langs w-[7rem] h-56 md:h-96 md:w-32">
                 <div class="langBox border-slate-700">

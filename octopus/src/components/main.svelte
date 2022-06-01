@@ -29,19 +29,20 @@
     }}
     modules={[Mousewheel, Pagination]}
     class="mySwiper swiper-v"
-  >
-  <SwiperSlide class="bg-emerald-900">
-  </SwiperSlide>
-  
-  <SwiperSlide class="bg-zinc-800">
-    <AboutBar/>
-  </SwiperSlide>
-  
+    >
+    
+      
+    <SwiperSlide class="bg-emerald-900">
+    </SwiperSlide>
+    
+    <SwiperSlide class="bg-zinc-800">
+      <AboutBar/>
+    </SwiperSlide>
     
     <SwiperSlide class="bg-emerald-900">
       <CodeBox/>
     </SwiperSlide>
-
+    
     <SwiperSlide class="bg-zinc-800">
       <Projects/>
     </SwiperSlide>
