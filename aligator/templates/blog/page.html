@@ -1,0 +1,15 @@
+{% extends "page.html" %}
+
+
+{% block header %}
+  {# This value is matched by the config.extra.menu.main~url #}
+  {% set current_section = "docs" %}
+  {{ macros_header::header(current_section=current_section)}}
+{% endblock header %}
+
+{% block content %} 
+    <div class="container">
+        <h1 class="blog-title">{{ page.title }}</h1>
+        <p class="blog-content">{{ page.content | safe }}</p>
+    </div>
+{% endblock content %}

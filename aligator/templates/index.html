@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    <div class="index">
+      {% if section.extra.list %}
+        {% for val in section.extra.list %}
+        <div class="news">
+          <h2 class="title">{{ val.title }}</h2>
+          <p class="content">{{ val.content | safe }}</p>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    {% block footer %}
+        {{ macros_footer::footer() }}
+    {% endblock footer %}
+  </div>
+{% endblock content %}

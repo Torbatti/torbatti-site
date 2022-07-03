@@ -1,0 +1,31 @@
+{% extends "section.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="docs-section">
+        {% set index_path = current_path ~ "_index.md" | trim_start_matches(pat="/") %}
+        {% set index = get_section(path=index_path) %}
+        
+        {% for page in index.pages %}                
+            <a  href="{{ page.permalink }}">
+                <div class="card">
+                {{ page.title }} &rarr;
+                </div>
+            </a>
+        {% endfor %}
+
+        {% for s in index.subsections %}
+            {% set subsection = get_section(path=s) %}
+            {% if subsection.pages %}
+                {% for page in subsection.pages %}
+                <a href="{{ page.permalink }}">
+                    <div class="card">
+                            {{subsection.title}} : {{ page.title }} &rarr;
+                    </div>
+                </a>
+                {% endfor %}                                    
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}

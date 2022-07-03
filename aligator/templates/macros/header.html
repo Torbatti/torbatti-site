@@ -1,0 +1,18 @@
+{% macro header(current_section) %}
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a class="" href="{{ get_url(path="/") }}">Alligator</a>            
+                <img src="https://img.icons8.com/plumpy/24/alligator.png"/>
+            </div>
+            <div class="links">
+                <a class="links-child docs" href="{{ get_url(path="@/docs/_index.md") }}">Docs</a>
+                <a class="links-child blog" href="{{ get_url(path="@/blog/_index.md") }}">Blog</a>
+            </div>
+            <div class="github_icon">
+                <a href="https://github.com/">
+                    <img src="{{ get_url(path="assets/GitHub-Mark-Light-32px.png") }}" alt="">
+                </a>
+            </div>
+    </header>
+{% endmacro %}

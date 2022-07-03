@@ -1,0 +1,10 @@
+{% macro stylesheet() %}
+<link rel="stylesheet" href="{{ get_url(path="main.css") | safe }}">
+{% endmacro %}
+
+{% macro resource() %}
+{% endmacro %}
+
+{% macro favicons() %}
+    <link rel="icon" type="image/png" sizes="24x24" href="{{ get_url(path="/assets/alligator.png") | safe }}">
+{% endmacro %}

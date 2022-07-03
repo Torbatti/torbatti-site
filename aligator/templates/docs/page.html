@@ -1,0 +1,24 @@
+{% extends "page.html" %}
+
+
+{% block header %}
+  {# This value is matched by the config.extra.menu.main~url #}
+  {% set current_section = "docs" %}
+  {{ macros_header::header(current_section=current_section)}}
+{% endblock header %}
+
+{% block content %}
+    <div class="container">
+        <div class="path-finder">
+            Path &rArr; {{ page.path}}
+        </div>
+    </div>
+    {{ macros_sidebar::docs_sidebar(current_section=current_section) }}
+    {{ macros_toc::docs_toc(page=page) }}
+    <div class="docs-page">
+        <div class="container">
+
+            {{ page.content | safe }}
+        </div>
+    </div>
+{% endblock content %}
